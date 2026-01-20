@@ -110,7 +110,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    return supabase.auth.signOut();
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) {
+      await supabase.auth.signOut({ scope: "local" });
+      return { error: null };
+    }
+
+    const result = await supabase.auth.signOut();
+    if (result.error?.name === "AuthSessionMissingError") {
+      await supabase.auth.signOut({ scope: "local" });
+      return { error: null };
+    }
+
+    return result;
   };
 
   const value = useMemo(

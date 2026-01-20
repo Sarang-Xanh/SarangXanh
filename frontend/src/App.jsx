@@ -15,6 +15,7 @@ import Members from "./Components/Members/Members";
 import Shop from "./Components/Shop/Shop";
 import Research from "./Components/Research/Research";
 import Login from "./Components/Admin/Login";
+import Signup from "./Components/Admin/Register";
 import TimelinePage from "./Components/Admin/Dashboard/Pages/TimelinePage";
 import StatsPage from "./Components/Admin/Dashboard/Pages/StatsPage";
 import GalleryPage from "./Components/Admin/Dashboard/Pages/GalleryPage";
@@ -44,6 +45,16 @@ function App() {
               <Navigate to={isAdmin ? "/admin" : "/"} replace />
             ) : (
               <Login />
+            )
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            session ? (
+              <Navigate to={isAdmin ? "/admin" : "/"} replace />
+            ) : (
+              <Signup />
             )
           }
         />

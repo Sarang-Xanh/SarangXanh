@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 const Login = () => {
@@ -63,7 +63,7 @@ const Login = () => {
 
         {/* Right Form Section */}
         <div className="w-full md:w-1/2 p-10 md:p-14">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Brand</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin login</h1>
           <p className="text-gray-500 text-sm mb-8">Welcome back!</p>
 
           {/* Form */}
@@ -117,12 +117,12 @@ const Login = () => {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             OR{" "}
-            <a
-              href="/signup"
+            <Link
+              to="/signup"
               className="text-black font-medium hover:underline"
             >
-              =)) IDK
-            </a>
+              Create account
+            </Link>
           </p>
         </div>
       </div>

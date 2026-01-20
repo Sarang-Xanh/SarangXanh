@@ -1,11 +1,28 @@
 import React, { useState } from "react";
 import { Menu, X, ShoppingBag } from "lucide-react";
-import {useNavigate} from "react-router-dom"
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { session, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const toggleMenu = () => setIsOpen(!isOpen);
+  const isLoggedIn = !!session;
+
+  const handleAuthClick = async () => {
+    if (isLoggedIn) {
+      const { error } = await signOut();
+      if (error) {
+        console.error("Failed to sign out:", error);
+        return;
+      }
+      navigate("/");
+      return;
+    }
+
+    navigate("/login");
+  };
 
   return (
     <nav className="absolute top-0 left-0 w-full z-50 shadow-sm"
@@ -69,9 +86,19 @@ const Navbar = () => {
             <span className="absolute top-[-6px] right-[-6px] w-2.5 h-2.5 bg-red-500 rounded-full" />
           </div>
 
+          {/* Login / Logout */}
+          <button
+            onClick={handleAuthClick}
+            className="hidden md:block border border-white text-white hover:bg-white/20 px-4 py-2 rounded-md text-sm font-semibold transition ml-6"
+          >
+            {isLoggedIn ? "Logout" : "Login"}
+          </button>
+
           {/* Apply Button */}
           <button
-            onClick={() => navigate("/apply")} className="hidden md:block border border-white text-white hover:bg-white/20 px-4 py-2 rounded-md text-sm font-semibold transition" >
+            onClick={() => navigate("/apply")}
+            className="hidden md:block border border-white text-white hover:bg-white/20 px-4 py-2 rounded-md text-sm font-semibold transition"
+          >
 
           Apply
           </button>
@@ -97,6 +124,14 @@ const Navbar = () => {
             <li><a href="/faqs" className="hover:text-blue-200">FAQs</a></li>
             <li><a href="/members" className="hover:text-blue-200">Members</a></li>
             <li><a href="/shop" className="hover:text-blue-200">Shop</a></li>
+            <li>
+              <button
+                onClick={handleAuthClick}
+                className="w-full text-left hover:text-blue-200"
+              >
+                {isLoggedIn ? "Logout" : "Login"}
+              </button>
+            </li>
           </ul>
         </div>
       )}
