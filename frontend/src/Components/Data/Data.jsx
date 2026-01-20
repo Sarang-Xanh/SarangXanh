@@ -12,18 +12,27 @@ import {
   Polyline,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { Bar } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend,
 } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const collectedLocations = [
   { city: "Hanoi", lat: 21.0285, lng: 105.8542 },
@@ -43,7 +52,8 @@ const Data = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, timelineRes, monthlyRes] = await Promise.all([
+        const [statsRes, timelineRes, monthlyRes, membersRes, memberMonthlyRes] =
+          await Promise.all([
           supabase.rpc("get_stats_totals"),
           supabase
             .from("timeline")
@@ -51,13 +61,17 @@ const Data = () => {
             .order("event_date", { ascending: true }),
           supabase
             .from("stats_monthly")
-            .select("month, plastic_collected, plastic_recycled, volunteers")
+            .select("month, plastic_collected, volunteers")
             .order("month", { ascending: true }),
+          supabase.rpc("get_member_count"),
+          supabase.rpc("get_member_growth_monthly"),
         ]);
 
         if (statsRes.error) throw statsRes.error;
         if (timelineRes.error) throw timelineRes.error;
         if (monthlyRes.error) throw monthlyRes.error;
+        if (membersRes.error) throw membersRes.error;
+        if (memberMonthlyRes.error) throw memberMonthlyRes.error;
 
         const rawStats = Array.isArray(statsRes.data)
           ? statsRes.data[0]
@@ -71,16 +85,30 @@ const Data = () => {
         const timeline = timelineRes.data || [];
         const monthly = (monthlyRes.data || []).slice().reverse();
 
-        const labels = monthly.map((item) => item.month.slice(5));
+        const labelsFromMonthly = monthly.map((item) => item.month.slice(0, 7));
         const collected = monthly.map((item) => item.plastic_collected);
-        const recycled = monthly.map((item) => item.plastic_recycled);
-        const volunteer = monthly.map((item) => item.volunteers);
+        const funds = monthly.map(() => 0);
+        const memberMonthly = memberMonthlyRes.data || [];
+        const memberByMonth = memberMonthly.reduce((acc, row) => {
+          if (!row?.month) return acc;
+          acc[row.month] = Number(row.count || 0);
+          return acc;
+        }, {});
+        let cumulative = 0;
+        const labels =
+          labelsFromMonthly.length > 0
+            ? labelsFromMonthly
+            : memberMonthly.map((row) => row.month);
+        const memberCounts = labels.map((monthKey) => {
+          cumulative += memberByMonth[monthKey] || 0;
+          return cumulative;
+        });
 
         setTimelineEvents(timeline);
 
         setStats([
           {
-            label: "Plastic Collected",
+            label: "Trash Collected",
             value: `${getValue([
               "plastic_collected",
               "total_plastic_collected",
@@ -90,19 +118,21 @@ const Data = () => {
             labels,
           },
           {
-            label: "Plastic Recycled",
-            value: `${getValue([
-              "plastic_recycled",
-              "total_plastic_recycled",
-              "total_recycled",
-            ])} kg`,
-            chart: recycled,
+            label: "Funds Raised",
+            value: `$${getValue([
+              "funds_raised",
+              "total_funds_raised",
+              "funds",
+              "total_funds",
+              "donations_total",
+            ])}`,
+            chart: funds,
             labels,
           },
           {
-            label: "Volunteers",
-            value: `${getValue(["volunteers", "total_volunteers"])} people`,
-            chart: volunteer,
+            label: "Members",
+            value: `${membersRes.data || 0} people`,
+            chart: memberCounts,
             labels,
           },
         ]);
@@ -131,7 +161,7 @@ const Data = () => {
     <section className="w-full bg-gradient-to-b from-white to-blue-50 text-gray-800">
       <Banner
         title="Real-Time Data"
-        subtitle="Track our plastic collection, recycling, and volunteer growth across Vietnam."
+        subtitle="Track our trash collection, funds raised, and member growth across Vietnam."
         buttonText="Explore Data"
         onButtonClick={() =>
           document.getElementById("overview")?.scrollIntoView({ behavior: "smooth" })
@@ -170,20 +200,42 @@ const Data = () => {
             <h4 className="text-lg font-semibold text-center mb-4 text-blue-700">
               {stats[activeChart].label} - Monthly Progress
             </h4>
-            <Bar
+            <Line
               data={{
-                labels: stats[activeChart].labels,
+                labels: stats[activeChart].labels.map((month) => {
+                  const [year, monthNum] = month.split("-");
+                  const date = new Date(Number(year), Number(monthNum) - 1, 1);
+                  return date.toLocaleString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  });
+                }),
                 datasets: [
                   {
                     label: stats[activeChart].label,
                     data: stats[activeChart].chart,
-                    backgroundColor: "rgba(59, 130, 246, 0.6)",
                     borderColor: "#3b82f6",
-                    borderWidth: 1,
+                    backgroundColor: "rgba(59, 130, 246, 0.15)",
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3,
                   },
                 ],
               }}
-              options={{ responsive: true, scales: { y: { beginAtZero: true } } }}
+              options={{
+                responsive: true,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    suggestedMax:
+                      Math.max(...stats[activeChart].chart, 0) * 1.2 || 5,
+                    grace: "10%",
+                    ticks: {
+                      stepSize: 1,
+                    },
+                  },
+                },
+              }}
             />
           </div>
         )}

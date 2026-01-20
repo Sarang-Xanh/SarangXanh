@@ -7,27 +7,32 @@ const FAQSection = () => {
     {
       question: "What is SarangXanh?",
       answer:
-        "SarangXanh is a project dedicated to reducing microplastic pollution by promoting eco-friendly products and raising awareness about ocean conservation.",
+        "SarangXanh is an initiative focused on promoting sustainable practices and green living. We offer a range of products and services designed to help individuals and communities reduce their environmental impact.",
     },
     {
-      question: "Where do the profits go?",
+      question: "How can I get involved?",
       answer:
-        "A portion of every purchase supports ocean clean-up initiatives and environmental education programs.",
+        "There are many ways to get involved with SarangXanh! You can participate in our events, volunteer for projects, or simply spread the word about our mission. Visit our Get Involved page for more information.",
     },
     {
-      question: "How can I contribute?",
+      question: "Where can I find your products?",
       answer:
-        "You can support by purchasing our eco-friendly merchandise, sharing our message, or volunteering in our clean-up campaigns.",
+        "Our products are available online through our website and at select retail locations. Check out our Shop page for more details on where to buy our products.",
     },
     {
-      question: "Are the products eco-friendly?",
+      question: "Do you organize community events?",
       answer:
-        "Yes! All products are made with sustainable materials and packaging that minimizes plastic waste.",
+        "Yes! We regularly host cleanups, workshops, and awareness campaigns. Follow us on social media or check our Events page for upcoming activities.",
     },
     {
-      question: "Do you ship internationally?",
+      question: "How do I contact SarangXanh?",
       answer:
-        "Yes, we ship worldwide! Shipping fees and times may vary by location.",
+        "You can reach us via our Contact page, email, or direct message on Instagram. We’re always happy to connect and answer your questions.",
+    },
+    {
+      question: "Can I volunteer if I’m not in Vietnam?",
+      answer:
+        "Absolutely! We welcome international volunteers for online campaigns, content creation, and remote support. Get in touch to learn more about global opportunities.",
     },
   ];
 

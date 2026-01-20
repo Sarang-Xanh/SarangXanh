@@ -74,7 +74,6 @@ const MembersPage = () => {
       name: inputs.name,
       role: inputs.role || "member",
       school: inputs.school || "",
-      description: inputs.description || "",
       team,
       picture_url: pictureUrl,
     };
@@ -97,7 +96,6 @@ const MembersPage = () => {
         name: member.name,
         role: member.role,
         school: member.school,
-        description: member.description,
         team: member.team,
         picture_url: member.picture_url,
       })
@@ -226,21 +224,12 @@ const MembersPage = () => {
                     onChange={(e) =>
                       handleFieldChange(member.id, "school", e.target.value)
                     }
-                    className="p-2 border border-gray-300 rounded-lg"
+                    className="p-2 border border-gray-300 rounded-lg md:col-span-2"
                     placeholder="School"
-                  />
-                  <input
-                    type="text"
-                    value={member.description}
-                    onChange={(e) =>
-                      handleFieldChange(member.id, "description", e.target.value)
-                    }
-                    className="p-2 border border-gray-300 rounded-lg"
-                    placeholder="Description"
                   />
                   <div className="relative">
                     <img
-                      src={member.picture_url || "/bg.jpg"}
+                      src={member.picture_url || "/Members/default.png"}
                       alt="pic"
                       className={`w-12 h-12 rounded-full object-cover border cursor-pointer ${
                         uploadingMemberId === member.id ? "opacity-50" : ""
@@ -307,16 +296,7 @@ const MembersPage = () => {
                 onChange={(e) =>
                   handleNewInputChange(team, "school", e.target.value)
                 }
-                className="p-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="text"
-                placeholder="Description"
-                value={newMemberInputs[team]?.description || ""}
-                onChange={(e) =>
-                  handleNewInputChange(team, "description", e.target.value)
-                }
-                className="p-2 border border-gray-300 rounded-lg"
+                className="p-2 border border-gray-300 rounded-lg md:col-span-2"
               />
               <input
                 type="file"

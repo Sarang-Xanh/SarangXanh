@@ -5,13 +5,15 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const Signup = () => {
   const [users, setUsers] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const { loading } = useAuth();
 
@@ -23,17 +25,34 @@ const Signup = () => {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  const handleGoogleSignup = async () => {
+    setFormError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/login` },
+    });
+
+    if (error) {
+      console.error("Google signup error:", error);
+      setFormError(error.message || "Google signup failed");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError("");
+    const trimmedEmail = users.email.trim();
     const { confirmPassword, ...dataToSend } = users;
+    dataToSend.email = trimmedEmail;
 
     let newErrors = {};
     if (users.password !== users.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
-    if (!users.name.trim()) newErrors.name = "Name is required";
-    if (!users.email.trim()) newErrors.email = "Email is required";
+    if (!users.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!users.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!trimmedEmail) newErrors.email = "Email is required";
     if (!users.password) newErrors.password = "Password is required";
     if (!users.confirmPassword) newErrors.confirmPassword = "Confirm your password";
 
@@ -42,18 +61,26 @@ const Signup = () => {
       return;
     }
 
+    const fullName = `${users.firstName.trim()} ${users.lastName.trim()}`.trim();
     const { error } = await supabase.auth.signUp({
-      email: dataToSend.email,
+      email: trimmedEmail,
       password: dataToSend.password,
       options: {
-        data: { name: dataToSend.name },
+        data: {
+          name: fullName,
+          first_name: users.firstName.trim(),
+          last_name: users.lastName.trim(),
+        },
       },
     });
 
     if (error) {
+      console.error("Signup error:", error);
       const message = error.message?.toLowerCase() || "";
-      if (message.includes("email")) {
+      if (message.includes("already") || message.includes("exists")) {
         setErrors({ email: "Email already in use" });
+      } else if (message) {
+        setFormError(error.message);
       } else {
         setErrors({ email: "Registration error" });
       }
@@ -70,21 +97,24 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <div className="flex w-full max-w-6xl shadow-2xl rounded-3xl overflow-hidden bg-white">
-        <div className="hidden md:block md:w-1/2">
-          <img
-            src="/login.jpg"
-            alt="Signup Visual"
-            className="h-full w-full object-cover"
-            style={{ minHeight: "400px", maxHeight: "600px" }}
-          />
-        </div>
-
-        <div className="w-full md:w-1/2 p-10 md:p-14">
+        <div className="w-full max-w-xl shadow-2xl rounded-3xl overflow-hidden bg-white">
+        <div className="w-full p-10 md:p-14">
+          <div className="mb-6">
+            <Link
+              to="/"
+              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            >
+              ← Back to Home
+            </Link>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
           <p className="text-gray-500 text-sm mb-8">Join us and start your journey.</p>
 
-          <button className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition mb-6">
+          <button
+            type="button"
+            onClick={handleGoogleSignup}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition mb-6"
+          >
             <img
               src="https://www.svgrepo.com/show/475656/google-color.svg"
               alt="Google"
@@ -100,17 +130,33 @@ const Signup = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name */}
+            {formError && (
+              <p className="text-red-500 text-sm">{formError}</p>
+            )}
+            {/* First Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
               <input
                 type="text"
-                name="name"
-                value={users.name}
+                name="firstName"
+                value={users.firstName}
                 onChange={handleChange}
-                className={inputClass("name")}
+                className={inputClass("firstName")}
               />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+              <input
+                type="text"
+                name="lastName"
+                value={users.lastName}
+                onChange={handleChange}
+                className={inputClass("lastName")}
+              />
+              {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
             </div>
 
             {/* Email */}

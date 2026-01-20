@@ -21,7 +21,7 @@ const highlights = [
   {
     icon: <Leaf size={20} />,
     title: "Live Environmental Data",
-    desc: "Live stats show our progress—plastic collected, recycled, and released.",
+    desc: "Live stats show our progress—trash collected, funds raised, and member growth.",
   },
   {
     icon: <Users size={20} />,

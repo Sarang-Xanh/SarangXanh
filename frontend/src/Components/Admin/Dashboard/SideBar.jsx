@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Smile,
   Home,
@@ -10,6 +10,7 @@ import {
   LogOut,
   BookOpen,
   FileText,
+  Mail,
 } from "lucide-react";
 import { useNavigate, Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -17,13 +18,19 @@ import { useAuth } from "../../../contexts/AuthContext";
 const Sidebar = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogout = async () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async () => {
     const { error } = await signOut();
     if (error) {
       console.error("Failed to sign out:", error);
       return;
     }
+    setShowLogoutModal(false);
     navigate("/");
   };
 
@@ -193,6 +200,26 @@ const Sidebar = () => {
               )}
             </NavLink>
           </li>
+
+          {/* Donation Notify */}
+          <li>
+            <NavLink to="/admin/donation-notify" className={menuItemClass}>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`p-2 rounded-lg ${
+                      isActive
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700"
+                    }`}
+                  >
+                    <Mail className="w-4 h-4" />
+                  </span>
+                  Donation Notify
+                </>
+              )}
+            </NavLink>
+          </li>
         </ul>
 
       </div>
@@ -218,6 +245,39 @@ const Sidebar = () => {
           Log Out
         </button>
       </div>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close logout modal"
+            onClick={() => setShowLogoutModal(false)}
+            className="absolute inset-0 bg-black/40"
+          />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 text-left">
+            <h3 className="text-xl font-semibold text-gray-900">Log out?</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Are you sure you want to log out?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirm}
+                className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };

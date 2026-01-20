@@ -5,6 +5,7 @@ import { supabase } from "../../../../lib/supabase";
 const ApplicationsPage = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -32,6 +33,28 @@ const ApplicationsPage = () => {
       </div>
     );
   }
+
+  const handleDelete = async (appId) => {
+    const confirmDelete = window.confirm(
+      "Delete this application? This action cannot be undone."
+    );
+    if (!confirmDelete) return;
+
+    setDeletingId(appId);
+    const { error } = await supabase
+      .from("volunteer_applications")
+      .delete()
+      .eq("id", appId);
+
+    if (error) {
+      console.error("Failed to delete application:", error);
+      setDeletingId(null);
+      return;
+    }
+
+    setApplications((prev) => prev.filter((app) => app.id !== appId));
+    setDeletingId(null);
+  };
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -69,6 +92,14 @@ const ApplicationsPage = () => {
                       ? new Date(app.interview_time).toLocaleString()
                       : "Not set"}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(app.id)}
+                    disabled={deletingId === app.id}
+                    className="mt-3 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700 disabled:text-red-300"
+                  >
+                    {deletingId === app.id ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
               </div>
               <div className="mt-4 text-sm text-gray-700 whitespace-pre-line">

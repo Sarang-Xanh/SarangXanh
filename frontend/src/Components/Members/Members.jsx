@@ -97,7 +97,6 @@ const Members = () => {
             name: member.name,
             role: member.role,
             school: member.school,
-            description: member.description,
             instagram: member.instagram,
             linkedin: member.linkedin,
             img: member.picture_url || member.picture || defaultImg,

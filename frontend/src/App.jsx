@@ -16,6 +16,7 @@ import Shop from "./Components/Shop/Shop";
 import Research from "./Components/Research/Research";
 import Login from "./Components/Admin/Login";
 import Signup from "./Components/Admin/Register";
+import CompleteProfile from "./Components/Auth/CompleteProfile";
 import TimelinePage from "./Components/Admin/Dashboard/Pages/TimelinePage";
 import StatsPage from "./Components/Admin/Dashboard/Pages/StatsPage";
 import GalleryPage from "./Components/Admin/Dashboard/Pages/GalleryPage";
@@ -23,7 +24,9 @@ import MembersPage from "./Components/Admin/Dashboard/Pages/MembersPage";
 import DashboardPage from "./Components/Admin/Dashboard/Pages/DashboardPage";
 import AdminResearch from "./Components/Admin/Dashboard/Pages/AdminResearch";
 import ApplicationsPage from "./Components/Admin/Dashboard/Pages/ApplicationsPage";
+import DonationNotifyPage from "./Components/Admin/Dashboard/Pages/DonationNotifyPage";
 import Apply from "./Components/Apply/Apply";
+import Donate from "./Components/Donate/Donate";
 import NotFound from "./Components/NotFound";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AdminErrorBoundary from "./Components/Admin/AdminErrorBoundary";
@@ -32,7 +35,7 @@ import PublicLayout from "./layouts/PublicLayout";
 import AdminDashboard from "./Components/Admin/Dashboard/Dashboard";
 
 function App() {
-  const { session, isAdmin } = useAuth();
+  const { session, isAdmin, profileComplete } = useAuth();
 
   return (
     <>
@@ -42,17 +45,31 @@ function App() {
           path="/login"
           element={
             session ? (
-              <Navigate to={isAdmin ? "/admin" : "/"} replace />
+              <Navigate
+                to={profileComplete ? (isAdmin ? "/admin" : "/") : "/complete-profile"}
+                replace
+              />
             ) : (
               <Login />
             )
           }
         />
         <Route
+          path="/complete-profile"
+          element={
+            <ProtectedRoute requireProfile={false}>
+              <CompleteProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/signup"
           element={
             session ? (
-              <Navigate to={isAdmin ? "/admin" : "/"} replace />
+              <Navigate
+                to={profileComplete ? (isAdmin ? "/admin" : "/") : "/complete-profile"}
+                replace
+              />
             ) : (
               <Signup />
             )
@@ -81,7 +98,7 @@ function App() {
           <Route path="/faqs" element={<Faq />} />
           <Route path="/members" element={<Members />} />
           <Route path="/shop" element={<Shop />} />
-          <Route path="/donate" element={<Navigate to="/apply" replace />} />
+          <Route path="/donate" element={<Donate />} />
           <Route path="/apply" element={<Apply />} />
           <Route path="/research" element={<Research />} />
         </Route>
@@ -135,6 +152,7 @@ function App() {
           <Route path="members" element={<MembersPage />} />
           <Route path="research" element={<AdminResearch />} />
           <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="donation-notify" element={<DonationNotifyPage />} />
         </Route>
 
         {/* 404 */}

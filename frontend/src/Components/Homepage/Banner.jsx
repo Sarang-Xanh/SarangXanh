@@ -7,8 +7,8 @@ import { supabase } from "../../lib/supabase";
 const Banner = () => {
   const [stats, setStats] = useState({
     trash_collected: 0,
-    plastic_recycled: 0,
-    volunteers: 0,
+    funds_raised: 0,
+    members: 0,
   });
 
   // ✅ Fetch stats from backend directly
@@ -21,9 +21,17 @@ const Banner = () => {
 
     const fetchStats = async () => {
       try {
-        const { data, error } = await supabase.rpc("get_stats_totals");
-        if (error) throw error;
-        const rawStats = Array.isArray(data) ? data[0] : data;
+        const [statsRes, membersRes] = await Promise.all([
+          supabase.rpc("get_stats_totals"),
+          supabase.rpc("get_member_count"),
+        ]);
+
+        if (statsRes.error) throw statsRes.error;
+        if (membersRes.error) throw membersRes.error;
+
+        const rawStats = Array.isArray(statsRes.data)
+          ? statsRes.data[0]
+          : statsRes.data;
         const getValue = (keys) =>
           keys.reduce(
             (acc, key) => (acc ?? rawStats?.[key] ?? null),
@@ -38,14 +46,16 @@ const Banner = () => {
               "total_collected",
             ])
           ),
-          plastic_recycled: Number(
+          funds_raised: Number(
             getValue([
-              "plastic_recycled",
-              "total_plastic_recycled",
-              "total_recycled",
+              "funds_raised",
+              "total_funds_raised",
+              "funds",
+              "total_funds",
+              "donations_total",
             ])
           ),
-          volunteers: Number(getValue(["volunteers", "total_volunteers"])),
+          members: Number(membersRes.data || 0),
         });
       } catch (err) {
         console.error("❌ Failed to fetch stats:", err);
@@ -79,8 +89,8 @@ const Banner = () => {
   }
 
   const animatedCollected = useCountUp(stats.trash_collected, 6000);
-  const animatedRecycled = useCountUp(stats.plastic_recycled, 6000);
-  const animatedVolunteers = useCountUp(stats.volunteers, 6000);
+  const animatedFunds = useCountUp(stats.funds_raised, 6000);
+  const animatedMembers = useCountUp(stats.members, 6000);
 
   return (
     <section
@@ -158,29 +168,29 @@ const Banner = () => {
               </h3>
             </div>
 
-            {/* Plastic Recycled */}
+            {/* Funds Raised */}
             <div
               className="bg-white text-center px-4 sm:px-6 2xl:px-8 py-4 2xl:py-6 rounded-lg shadow-md w-48 sm:w-auto"
               data-aos="fade-up"
               data-aos-delay="200"
             >
               <p className="text-gray-600 text-sm 2xl:text-base">
-                Plastic Recycled
+                Funds Raised
               </p>
               <h3 className="text-xl sm:text-2xl 2xl:text-3xl font-bold text-black">
-                {animatedRecycled.toLocaleString()} Kg
+                ${animatedFunds.toLocaleString()}
               </h3>
             </div>
 
-            {/* Volunteers */}
+            {/* Members */}
             <div
               className="bg-white text-center px-4 sm:px-6 2xl:px-8 py-4 2xl:py-6 rounded-lg shadow-md w-48 sm:w-auto"
               data-aos="fade-up"
               data-aos-delay="300"
             >
-              <p className="text-gray-600 text-sm 2xl:text-base">Volunteers</p>
+              <p className="text-gray-600 text-sm 2xl:text-base">Members</p>
               <h3 className="text-xl sm:text-2xl 2xl:text-3xl font-bold text-black">
-                {animatedVolunteers.toLocaleString()} People
+                {animatedMembers.toLocaleString()} People
               </h3>
             </div>
           </div>

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  MousePointerClick,
   Recycle,
   Trash2,
   Users,
+  User,
   Loader2,
 } from "lucide-react";
 import {
@@ -23,7 +23,7 @@ const DashboardPage = () => {
     plastic_recycled: 0,
     volunteers: 0,
   });
-  const [viewCount, setViewCount] = useState(0);
+  const [memberCount, setMemberCount] = useState(0);
   const [monthlyStats, setMonthlyStats] = useState([]);
   const [recentTimeline, setRecentTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,12 +34,15 @@ const DashboardPage = () => {
       try {
         const [
           statsTotalsRes,
-          viewsTotalRes,
+          membersTotalRes,
           monthlyStatsRes,
           timelineRes,
         ] = await Promise.all([
           supabase.rpc("get_stats_totals"),
-          supabase.rpc("get_page_views_total"),
+          supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .neq("role", "admin"),
           supabase
             .from("stats_monthly")
             .select("month, plastic_collected")
@@ -78,19 +81,10 @@ const DashboardPage = () => {
           });
         }
 
-        if (viewsTotalRes.error) {
-          console.error("Failed to load views:", viewsTotalRes.error);
+        if (membersTotalRes.error) {
+          console.error("Failed to load member count:", membersTotalRes.error);
         } else {
-          const rawViews = Array.isArray(viewsTotalRes.data)
-            ? viewsTotalRes.data[0]
-            : viewsTotalRes.data;
-          const totalViews =
-            rawViews?.total_views ??
-            rawViews?.views ??
-            rawViews?.count ??
-            rawViews ??
-            0;
-          setViewCount(totalViews);
+          setMemberCount(membersTotalRes.count || 0);
         }
 
         if (monthlyStatsRes.error) {
@@ -138,10 +132,10 @@ const DashboardPage = () => {
       color: "bg-blue-600",
     },
     {
-      icon: <MousePointerClick />,
-      value: viewCount,
-      label: "Total Page Views",
-      color: "bg-zinc-900",
+      icon: <User />,
+      value: memberCount,
+      label: "Total Members",
+      color: "bg-indigo-600",
     },
   ];
 
@@ -228,6 +222,7 @@ const DashboardPage = () => {
           </ResponsiveContainer>
         </div>
       </div>
+
     </div>
   );
 };

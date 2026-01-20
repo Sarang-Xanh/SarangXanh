@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 
 const Login = () => {
   const [values, setValues] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const { signIn } = useAuth();
 
@@ -18,8 +20,22 @@ const Login = () => {
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
   };
 
+  const handleGoogleLogin = async () => {
+    setFormError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/login` },
+    });
+
+    if (error) {
+      console.error("Google login error:", error);
+      setFormError(error.message || "Google login failed");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError("");
     const newErrors = {};
     if (!values.email.trim()) newErrors.email = "Email is required";
     if (!values.password.trim()) newErrors.password = "Password is required";
@@ -36,6 +52,7 @@ const Login = () => {
         email: "Invalid email or password",
         password: "Invalid email or password",
       });
+      setFormError(error.message || "Login failed");
       return;
     }
 
@@ -63,11 +80,46 @@ const Login = () => {
 
         {/* Right Form Section */}
         <div className="w-full md:w-1/2 p-10 md:p-14">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin login</h1>
+          <div className="mb-6">
+            <Link
+              to="/"
+              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            >
+              ← Back to Home
+            </Link>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Login</h1>
           <p className="text-gray-500 text-sm mb-8">Welcome back!</p>
+
+          {/* Google Login */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition mb-6"
+          >
+            <img
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            <span className="font-medium text-sm text-gray-700">
+              Log in with Google
+            </span>
+          </button>
+
+          <div className="flex items-center my-6">
+            <div className="flex-grow h-px bg-gray-200" />
+            <span className="px-4 text-sm text-gray-400">
+              OR LOG IN WITH EMAIL
+            </span>
+            <div className="flex-grow h-px bg-gray-200" />
+          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+            {formError && (
+              <p className="text-red-500 text-sm">{formError}</p>
+            )}
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -91,9 +143,6 @@ const Login = () => {
                 <label className="text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <a href="#" className="text-sm text-gray-500 hover:underline">
-                  Ask website team for the password.
-                </a>
               </div>
               <input
                 type="password"
