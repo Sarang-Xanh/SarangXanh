@@ -1,59 +1,41 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Banner from "../Banner";
-
-const allResources = [
-  {
-    type: "News",
-    title: "Vietnam’s Plastic Waste Crisis",
-    description:
-      "An in-depth article on the growing plastic pollution issue in Vietnam and its environmental impact.",
-    source: "The Guardian",
-    date: "2024-11-20",
-    link: "https://www.theguardian.com/environment/vietnam-plastic-waste",
-  },
-  {
-    type: "Paper",
-    title: "Ocean Plastic Debris Accumulation Trends",
-    description:
-      "A scientific study tracking ocean plastic accumulation across Southeast Asia.",
-    source: "Nature",
-    date: "2023-06-10",
-    link: "https://www.nature.com/articles/ocean-plastic-debris",
-  },
-  {
-    type: "Report",
-    title: "UNEP: Global Plastic Outlook",
-    description:
-      "United Nations Environment Programme report on global plastic usage and waste management trends.",
-    source: "UNEP",
-    date: "2025-01-05",
-    link: "https://www.unep.org/reports/global-plastic-outlook",
-  },
-  {
-    type: "News",
-    title: "Vietnam Youth Lead River Cleanup",
-    description:
-      "A story covering Vietnamese students taking action to clean the Red River.",
-    source: "VNExpress",
-    date: "2025-03-15",
-    link: "https://vnexpress.net/vietnam-youth-cleanup",
-  },
-];
+import { supabase } from "../../lib/supabase";
 
 const filterOptions = ["All", "News", "Paper", "Report"];
 
 const Research = () => {
   const [selectedType, setSelectedType] = useState("All");
+  const [resources, setResources] = useState([]);
 
   const filtered = useMemo(() => {
     const base =
       selectedType === "All"
-        ? allResources
-        : allResources.filter((item) => item.type === selectedType);
+        ? resources
+        : resources.filter((item) => item.type === selectedType);
     return [...base].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [selectedType]);
+  }, [resources, selectedType]);
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      const { data, error } = await supabase
+        .from("research")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (error) {
+        console.error("Failed to load research:", error);
+        setResources([]);
+        return;
+      }
+
+      setResources(data || []);
+    };
+
+    fetchResources();
+  }, []);
 
   return (
     <section className="w-full bg-gradient-to-b from-white to-blue-50 text-gray-800">
@@ -88,9 +70,9 @@ const Research = () => {
 
         {/* Resource cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {filtered.map((item, index) => (
+          {filtered.map((item) => (
             <a
-              key={index}
+              key={item.id}
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"

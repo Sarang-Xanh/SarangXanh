@@ -1,13 +1,12 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { AuthContext } from "../../Context/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 const Login = () => {
   const [values, setValues] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-  const { setAuth, setUser } = useContext(AuthContext);
+  const { signIn } = useAuth();
 
   const handleChange = (e) => {
     setValues({
@@ -19,7 +18,7 @@ const Login = () => {
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
     if (!values.email.trim()) newErrors.email = "Email is required";
@@ -30,29 +29,17 @@ const Login = () => {
       return;
     }
 
-    axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/login`, values, { withCredentials: true })
-      .then((res) => {
-        if (res.data.status === "Success") {
-          setAuth(true);
-          setUser({
-            name: res.data.user.name,
-            email: res.data.user.email,
-            id: res.data.user.id,
-          });
-          navigate(`/admin/dashboard`);
-        }
-      })
-      .catch((err) => {
-        if (err.response?.status === 401) {
-          setErrors({
-            email: "Invalid email or password",
-            password: "Invalid email or password",
-          });
-        } else {
-          setErrors({ email: "Something went wrong. Please try again." });
-        }
+    const { error } = await signIn(values.email, values.password);
+
+    if (error) {
+      setErrors({
+        email: "Invalid email or password",
+        password: "Invalid email or password",
       });
+      return;
+    }
+
+    navigate("/admin");
   };
 
   const inputClass = (field) =>
@@ -105,7 +92,7 @@ const Login = () => {
                   Password
                 </label>
                 <a href="#" className="text-sm text-gray-500 hover:underline">
-                  Forgot Password? Asks Hieu :)
+                  Ask website team for the password.
                 </a>
               </div>
               <input

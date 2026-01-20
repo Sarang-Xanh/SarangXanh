@@ -34,12 +34,11 @@ const Footer = () => {
             SARANGXANH
           </h2>
           <p className="w-fit mx-auto text-center">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Ratione,
-            sint.
+            Become the next changemaker.
           </p>
           <div className="flex flex-row justify-center gap-x-8 w-fit mx-auto text-3xl">
             <a
-              href="https://github.com/kerbthecurb/SarangXanh"
+              href="https://github.com/SarangXanh-kr/SarangXanh"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-amber-300 transition-colors duration-200"

@@ -1,33 +1,30 @@
-import React, { useContext } from "react";
+import React from "react";
 import {
   Smile,
   Home,
-  Table,
+  Clock,
+  BarChart3,
   Image,
   Users,
   User,
   LogOut,
-  Pencil,
+  BookOpen,
+  FileText,
 } from "lucide-react";
 import { useNavigate, Link, NavLink } from "react-router-dom";
-import { AuthContext } from "../../../Context/AuthContext";
-import axios from "axios";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const { setAuth, user, setUser, setWasLoggedInBefore } =
-    useContext(AuthContext);
+  const { signOut, user } = useAuth();
 
-  const handleLogout = () => {
-    axios
-      .get(`${import.meta.env.VITE_API_BASE_URL}/logout`, { withCredentials: true })
-      .then(() => {
-        setAuth(false);
-        setUser({});
-        setWasLoggedInBefore(false);
-        navigate("/");
-      })
-      .catch((err) => console.log(err));
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      console.error("Failed to sign out:", error);
+      return;
+    }
+    navigate("/");
   };
 
   // ✅ Shared style for menu items
@@ -47,13 +44,13 @@ const Sidebar = () => {
           <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
             <Smile className="w-5 h-5 text-gray-700" />
           </div>
-          <h1 className="text-lg font-bold">SarangXanh</h1>
+          <h1 className="text-lg font-bold">SarangXanh Admin</h1>
         </Link>
 
         {/* Dashboard */}
         <ul className="space-y-2">
           <li>
-            <NavLink to="/admin/dashboard/dashboard" className={menuItemClass}>
+            <NavLink to="/admin" className={menuItemClass}>
               {({ isActive }) => (
                 <>
                   <span
@@ -77,9 +74,9 @@ const Sidebar = () => {
           Website Data
         </h2>
         <ul className="space-y-2">
-          {/* Data */}
+          {/* Timeline */}
           <li>
-            <NavLink to="/admin/dashboard/data" className={menuItemClass}>
+            <NavLink to="/admin/timeline" className={menuItemClass}>
               {({ isActive }) => (
                 <>
                   <span
@@ -89,9 +86,29 @@ const Sidebar = () => {
                         : "bg-white text-gray-700"
                     }`}
                   >
-                    <Table className="w-4 h-4" />
+                    <Clock className="w-4 h-4" />
                   </span>
-                  Data
+                  Timeline
+                </>
+              )}
+            </NavLink>
+          </li>
+
+          {/* Stats */}
+          <li>
+            <NavLink to="/admin/stats" className={menuItemClass}>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`p-2 rounded-lg ${
+                      isActive
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700"
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </span>
+                  Stats
                 </>
               )}
             </NavLink>
@@ -99,7 +116,7 @@ const Sidebar = () => {
 
           {/* Gallery */}
           <li>
-            <NavLink to="/admin/dashboard/gallery" className={menuItemClass}>
+            <NavLink to="/admin/gallery" className={menuItemClass}>
               {({ isActive }) => (
                 <>
                   <span
@@ -119,7 +136,7 @@ const Sidebar = () => {
 
           {/* Members */}
           <li>
-            <NavLink to="/admin/dashboard/members" className={menuItemClass}>
+            <NavLink to="/admin/members" className={menuItemClass}>
               {({ isActive }) => (
                 <>
                   <span
@@ -136,6 +153,46 @@ const Sidebar = () => {
               )}
             </NavLink>
           </li>
+
+          {/* Research */}
+          <li>
+            <NavLink to="/admin/research" className={menuItemClass}>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`p-2 rounded-lg ${
+                      isActive
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700"
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                  </span>
+                  Research
+                </>
+              )}
+            </NavLink>
+          </li>
+
+          {/* Applications */}
+          <li>
+            <NavLink to="/admin/applications" className={menuItemClass}>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`p-2 rounded-lg ${
+                      isActive
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700"
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                  </span>
+                  Applications
+                </>
+              )}
+            </NavLink>
+          </li>
         </ul>
 
       </div>
@@ -147,7 +204,7 @@ const Sidebar = () => {
           <span className="bg-white p-2 rounded-lg">
             <User className="w-4 h-4 text-gray-700" />
           </span>
-          {user.name}
+          {user?.email || "Account"}
         </button>
 
         {/* Logout Button */}

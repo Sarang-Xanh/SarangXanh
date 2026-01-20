@@ -1,19 +1,42 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../lib/supabase";
 import Banner from "../Banner";
 
-const Gallery = () => {
-  const [galleryData, setGalleryData] = useState({});
-  const [selectedYear, setSelectedYear] = useState("All");
-  const [modalMedia, setModalMedia] = useState(null);
+const GallerySection = ({ title, items }) => (
+  <section className="space-y-4">
+    <h2 className="text-2xl font-bold text-blue-800">{title}</h2>
+    {items.length === 0 ? (
+      <div className="text-sm text-gray-500">No photos yet.</div>
+    ) : (
+      <div className="columns-2 sm:columns-3 md:columns-4 xl:columns-5 2xl:columns-6 gap-2">
+        {items.map((media) => (
+          <div key={media.id} className="mb-2 break-inside-avoid">
+            <div className="overflow-hidden rounded-2xl">
+              <img
+                src={media.image_url}
+                alt={media.title || `gallery-${media.id}`}
+                className="w-full object-cover"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+);
 
-  const imageBase = "/uploads"; // or full URL if needed
+const Gallery = () => {
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
     const fetchGallery = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/gallery`, { withCredentials: true });
-        setGalleryData(res.data);
+        const { data, error } = await supabase
+          .from("gallery")
+          .select("id, year, image_url, title, description")
+          .order("year", { ascending: false });
+        if (error) throw error;
+        setItems(data || []);
       } catch (err) {
         console.error("❌ Failed to fetch gallery:", err);
       }
@@ -21,15 +44,34 @@ const Gallery = () => {
     fetchGallery();
   }, []);
 
-  // Build flat media array
-  const allMedia = Object.entries(galleryData)
-    .map(([year, items]) => items.map((item) => ({ ...item, year })))
-    .flat();
+  const displayItems = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+        displayDate: item.year ? String(item.year) : "Unknown",
+        shortDescription: item.description
+          ? item.description.slice(0, 80)
+          : "",
+      })),
+    [items]
+  );
 
-  const filteredMedia =
-    selectedYear === "All"
-      ? allMedia
-      : allMedia.filter((item) => item.year === String(selectedYear));
+  const groupedByYear = useMemo(() => {
+    return displayItems.reduce((acc, item) => {
+      const key = item.year ? String(item.year) : "Unknown";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+  }, [displayItems]);
+  const yearSections = useMemo(() => {
+    const years = Object.keys(groupedByYear);
+    return years.sort((a, b) => {
+      if (a === "Unknown") return 1;
+      if (b === "Unknown") return -1;
+      return Number(b) - Number(a);
+    });
+  }, [groupedByYear]);
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-white to-blue-50 text-gray-800">
@@ -44,99 +86,17 @@ const Gallery = () => {
         }
       />
 
-      {/* Year Filter */}
-      <div className="flex justify-center gap-6 mt-10 mb-6 flex-wrap">
-        {["All", ...Object.keys(galleryData).sort().reverse()].map((year) => (
-          <button
-            key={year}
-            className={`px-4 py-2 text-sm font-semibold rounded-full border ${
-              selectedYear === year
-                ? "bg-blue-500 text-white"
-                : "bg-white text-blue-500 border-blue-400 hover:bg-blue-100"
-            } transition`}
-            onClick={() => setSelectedYear(year)}
-          >
-            {year}
-          </button>
-        ))}
-      </div>
-
-      {/* Masonry Image Grid */}
-      <div
-        id="gallery-grid"
-        className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 px-4"
-      >
-        {filteredMedia.map((media, idx) => (
-          <div
-            key={idx}
-            className="mb-4 break-inside-avoid cursor-pointer group"
-            onClick={() => setModalMedia(media)}
-          >
-            {media.image_url?.includes("youtube") ? (
-              <div className="w-full aspect-video rounded-md overflow-hidden">
-                <iframe
-                  src={media.image_url}
-                  title={media.title}
-                  className="w-full h-full pointer-events-none"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              <img
-                src={
-                  media.image_url.startsWith("http")
-                    ? media.image_url
-                    : `${imageBase}/${media.image_url}`
-                }
-                alt={media.title}
-                className="w-full rounded-md hover:brightness-90 transition duration-200"
-              />
-            )}
-            <div className="bg-black/50 text-white text-xs p-2 rounded-b-md mt-1">
-              {media.title}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Modal */}
-      {modalMedia && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          onClick={() => setModalMedia(null)}
-        >
-          <div
-            className="max-w-3xl w-full mx-4 relative bg-transparent"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {modalMedia.image_url?.includes("youtube") ? (
-              <div className="w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-black">
-                <iframe
-                  src={modalMedia.image_url}
-                  title={modalMedia.title}
-                  className="w-full h-full"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              <img
-                src={
-                  modalMedia.image_url.startsWith("http")
-                    ? modalMedia.image_url
-                    : `${imageBase}/${modalMedia.image_url}`
-                }
-                alt={modalMedia.title}
-                className="w-full rounded-lg shadow-lg object-contain max-h-[80vh]"
-              />
-            )}
-            <p className="mt-4 text-white text-sm bg-black/50 px-4 py-2 rounded w-fit mx-auto">
-              <p className = "text-center font-bold">{modalMedia.title}</p>
-              <br />
-              {modalMedia.description}
-            </p>
-          </div>
+      <div className="max-w-6xl mx-auto px-4 py-10" id="gallery-grid">
+        <div className="rounded-3xl bg-white/70 p-4 sm:p-6 space-y-10">
+          {yearSections.map((year) => (
+            <GallerySection
+              key={year}
+              title={year}
+              items={groupedByYear[year]}
+            />
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };

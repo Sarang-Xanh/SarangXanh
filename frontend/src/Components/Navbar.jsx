@@ -69,11 +69,11 @@ const Navbar = () => {
             <span className="absolute top-[-6px] right-[-6px] w-2.5 h-2.5 bg-red-500 rounded-full" />
           </div>
 
-          {/* Donate Button */}
+          {/* Apply Button */}
           <button
-            onClick={() => navigate("/donate")} className="hidden md:block border border-white text-white hover:bg-white/20 px-4 py-2 rounded-md text-sm font-semibold transition" >
+            onClick={() => navigate("/apply")} className="hidden md:block border border-white text-white hover:bg-white/20 px-4 py-2 rounded-md text-sm font-semibold transition" >
 
-          Donate
+          Apply
           </button>
 
 

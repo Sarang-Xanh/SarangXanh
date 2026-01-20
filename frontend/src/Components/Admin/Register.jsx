@@ -1,7 +1,7 @@
-import React, { useState, useContext } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../Context/AuthContext";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../contexts/AuthContext";
 
 const Signup = () => {
   const [users, setUsers] = useState({
@@ -13,7 +13,7 @@ const Signup = () => {
 
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-  const { setAuth, setUser } = useContext(AuthContext);
+  const { loading } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,7 +23,7 @@ const Signup = () => {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const { confirmPassword, ...dataToSend } = users;
 
@@ -42,37 +42,25 @@ const Signup = () => {
       return;
     }
 
-    axios
-      .post("/api/register", dataToSend)
-      .then((res) => {
-        if (res.data.status === "Success") {
-          axios
-            .get("/api/user", { withCredentials: true })
-            .then((userRes) => {
-              setUser(userRes.data);
-              setAuth(true);
-              navigate(`/admin/dashboard`);
-            })
-            .catch(() => {
-              setAuth(true);
-              navigate("/login");
-            });
-        }
-      })
-      .catch((err) => {
-        if (err.response?.status === 409) {
-          const errorMsg = err.response.data.error?.toLowerCase() || "";
-          if (errorMsg.includes("email")) {
-            setErrors({ email: "Email already in use" });
-          } else if (errorMsg.includes("name")) {
-            setErrors({ name: "Username already taken" });
-          } else {
-            setErrors({ email: "Registration error" });
-          }
-        } else {
-          setErrors({ email: "Something went wrong. Please try again." });
-        }
-      });
+    const { error } = await supabase.auth.signUp({
+      email: dataToSend.email,
+      password: dataToSend.password,
+      options: {
+        data: { name: dataToSend.name },
+      },
+    });
+
+    if (error) {
+      const message = error.message?.toLowerCase() || "";
+      if (message.includes("email")) {
+        setErrors({ email: "Email already in use" });
+      } else {
+        setErrors({ email: "Registration error" });
+      }
+      return;
+    }
+
+    navigate("/login");
   };
 
   const inputClass = (field) =>
@@ -168,6 +156,7 @@ const Signup = () => {
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full py-3 bg-black text-white rounded-lg font-semibold text-sm hover:bg-gray-900 transition"
             >
               Sign Up

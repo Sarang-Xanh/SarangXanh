@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { supabase } from "../../lib/supabase";
 import { FaInstagram, FaLinkedin } from "react-icons/fa";
 import { motion } from "framer-motion";
 import Banner from "../Banner";
 
-const defaultImg = "/bg.jpg";
+const defaultImg = "/Members/default.png";
+const teamOrder = ["content", "website", "marketing", "media"];
 
 const MemberCard = ({
   name,
@@ -22,11 +23,11 @@ const MemberCard = ({
       viewport={{ once: true }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="w-full aspect-[2/3] overflow-hidden rounded-md border border-gray-200 mb-2 bg-white flex items-center justify-center">
+      <div className="w-24 h-24 overflow-hidden rounded-full border border-gray-200 mb-2 bg-white flex items-center justify-center">
         <img
           src={img}
           alt={name}
-          className="h-full object-contain object-center"
+          className="w-full h-full object-cover object-center"
         />
       </div>
       <p className="text-sm font-semibold text-gray-800 flex items-center gap-1 text-center">
@@ -58,19 +59,23 @@ const MemberCard = ({
   );
 };
 
-const TeamSection = ({ title, members }) => (
-  <div className="mb-16 text-left">
-    <h3 className="text-2xl font-extrabold text-blue-700 mb-6">{title}</h3>
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-      {members.map((member, index) => (
-        <MemberCard
-          key={member.id || index}
-          {...member}
-        />
-      ))}
+const TeamSection = ({ title, members }) => {
+  const displayTitle = title
+    ? title.charAt(0).toUpperCase() + title.slice(1)
+    : "";
+  return (
+    <div className="mb-16 text-left">
+      <h3 className="text-2xl font-extrabold text-blue-700 mb-6">
+        {displayTitle}
+      </h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        {members.map((member, index) => (
+          <MemberCard key={member.id || index} {...member} />
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Members = () => {
   const [membersByTeam, setMembersByTeam] = useState({});
@@ -78,9 +83,13 @@ const Members = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/members`);
+        const { data, error } = await supabase
+          .from("members")
+          .select("*")
+          .order("name", { ascending: true });
+        if (error) throw error;
         const grouped = {};
-        res.data.forEach((member) => {
+        (data || []).forEach((member) => {
           const team = member.team || "Others";
           if (!grouped[team]) grouped[team] = [];
           grouped[team].push({
@@ -91,7 +100,15 @@ const Members = () => {
             description: member.description,
             instagram: member.instagram,
             linkedin: member.linkedin,
-            img: member.picture || defaultImg,
+            img: member.picture_url || member.picture || defaultImg,
+          });
+        });
+        Object.values(grouped).forEach((teamMembers) => {
+          teamMembers.sort((a, b) => {
+            const aRank = a.role === "leader" ? 0 : 1;
+            const bRank = b.role === "leader" ? 0 : 1;
+            if (aRank !== bRank) return aRank - bRank;
+            return (a.name || "").localeCompare(b.name || "");
           });
         });
         setMembersByTeam(grouped);
@@ -114,8 +131,15 @@ const Members = () => {
       />
 
       <div className="max-w-6xl mx-auto px-6 py-20" id="teams">
-        {Object.entries(membersByTeam).map(([teamName, members], idx) => (
-          <TeamSection key={idx} title={teamName} members={members} />
+        {[
+          ...teamOrder.filter((team) => membersByTeam[team]),
+          ...Object.keys(membersByTeam).filter((team) => !teamOrder.includes(team)),
+        ].map((teamName) => (
+          <TeamSection
+            key={teamName}
+            title={teamName}
+            members={membersByTeam[teamName]}
+          />
         ))}
       </div>
     </section>

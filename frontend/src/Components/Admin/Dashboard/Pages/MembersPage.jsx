@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import { Save, Trash2, Plus, Loader2 } from "lucide-react";
+import { supabase } from "../../../../lib/supabase";
 
 const roles = ["leader", "co-leader", "member"];
-const teams = ["content", "media", "website", "marketing"];
+const teams = ["content", "website", "marketing", "media"];
 
 const MembersPage = () => {
   const [members, setMembers] = useState([]);
@@ -20,28 +20,45 @@ const MembersPage = () => {
 
   const fetchMembers = async () => {
     setLoading(true);
-    const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/members`, {
-      withCredentials: true,
-    });
-    setMembers(res.data);
+    const { data, error } = await supabase
+      .from("members")
+      .select("*")
+      .order("name", { ascending: true });
+    if (error) {
+      console.error("Failed to load members:", error);
+      setMembers([]);
+    } else {
+      setMembers(data || []);
+    }
     setLoading(false);
   };
 
   const uploadImage = async (file) => {
     if (!file) return "";
-    const form = new FormData();
-    form.append("image", file);
-    const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/upload`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-      withCredentials: true,
-    });
-    return res.data.imageUrl;
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.${fileExt}`;
+    const filePath = `members/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("public-media")
+      .upload(filePath, file);
+    if (uploadError) {
+      console.error("Failed to upload image:", uploadError);
+      return "";
+    }
+
+    const { data } = supabase.storage
+      .from("public-media")
+      .getPublicUrl(filePath);
+    return data.publicUrl;
   };
 
   const handleAdd = async (team) => {
     const inputs = newMemberInputs[team] || {};
-    if (!inputs.name || !inputs.description) {
-      alert("⚠️ Please fill in at least name and description.");
+    if (!inputs.name) {
+      alert("⚠️ Please fill in at least name.");
       return;
     }
 
@@ -57,14 +74,15 @@ const MembersPage = () => {
       name: inputs.name,
       role: inputs.role || "member",
       school: inputs.school || "",
-      description: inputs.description,
+      description: inputs.description || "",
       team,
-      picture: pictureUrl,
+      picture_url: pictureUrl,
     };
 
-    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/members`, newMember, {
-      withCredentials: true,
-    });
+    const { error } = await supabase.from("members").insert([newMember]);
+    if (error) {
+      console.error("Failed to add member:", error);
+    }
     await fetchMembers();
 
     setNewMemberInputs((prev) => ({ ...prev, [team]: {} }));
@@ -73,16 +91,30 @@ const MembersPage = () => {
   };
 
   const handleUpdate = async (member) => {
-    await axios.put(`${import.meta.env.VITE_API_BASE_URL}/members/${member.id}`, member, {
-      withCredentials: true,
-    });
+    const { error } = await supabase
+      .from("members")
+      .update({
+        name: member.name,
+        role: member.role,
+        school: member.school,
+        description: member.description,
+        team: member.team,
+        picture_url: member.picture_url,
+      })
+      .eq("id", member.id);
+    if (error) {
+      console.error("Failed to update member:", error);
+      return;
+    }
     alert("✅ Member updated!");
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/members/${id}`, {
-      withCredentials: true,
-    });
+    const { error } = await supabase.from("members").delete().eq("id", id);
+    if (error) {
+      console.error("Failed to delete member:", error);
+      return;
+    }
     setMembers((prev) => prev.filter((m) => m.id !== id));
   };
 
@@ -102,10 +134,17 @@ const MembersPage = () => {
     }));
   };
 
-  const getTeamMembers = (team) =>
-    members.filter(
+  const getTeamMembers = (team) => {
+    const byTeam = members.filter(
       (member) => member.team?.toLowerCase() === team.toLowerCase()
     );
+    return byTeam.slice().sort((a, b) => {
+      const aRank = a.role === "leader" ? 0 : 1;
+      const bRank = b.role === "leader" ? 0 : 1;
+      if (aRank !== bRank) return aRank - bRank;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  };
 
   const handlePictureClick = (id) => {
     if (fileInputs.current[id]) {
@@ -119,7 +158,7 @@ const MembersPage = () => {
 
     setUploadingMemberId(member.id);
     const imageUrl = await uploadImage(file);
-    const updatedMember = { ...member, picture: imageUrl };
+    const updatedMember = { ...member, picture_url: imageUrl };
     await handleUpdate(updatedMember);
     setMembers((prev) =>
       prev.map((m) => (m.id === member.id ? updatedMember : m))
@@ -201,7 +240,7 @@ const MembersPage = () => {
                   />
                   <div className="relative">
                     <img
-                      src={member.picture}
+                      src={member.picture_url || "/bg.jpg"}
                       alt="pic"
                       className={`w-12 h-12 rounded-full object-cover border cursor-pointer ${
                         uploadingMemberId === member.id ? "opacity-50" : ""

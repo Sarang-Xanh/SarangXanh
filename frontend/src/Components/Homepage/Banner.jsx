@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import AOS from "aos";
 import { Globe } from "lucide-react";
-import axios from "axios";
 import { Link } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
 
 const Banner = () => {
   const [stats, setStats] = useState({
@@ -19,30 +19,39 @@ const Banner = () => {
       easing: "ease-in-out",
     });
 
-    const trackView = async () => {
-      try {
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/views/homepage`);
-      } catch (err) {
-        console.error("❌ Failed to track view:", err);
-      }
-    };
-
     const fetchStats = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/data`);
-        const backendStats = res.data.stats;
+        const { data, error } = await supabase.rpc("get_stats_totals");
+        if (error) throw error;
+        const rawStats = Array.isArray(data) ? data[0] : data;
+        const getValue = (keys) =>
+          keys.reduce(
+            (acc, key) => (acc ?? rawStats?.[key] ?? null),
+            null
+          ) ?? 0;
 
         setStats({
-          trash_collected: Number(backendStats.plastic_collected || 0),
-          plastic_recycled: Number(backendStats.plastic_recycled || 0),
-          volunteers: Number(backendStats.volunteers || 0),
+          trash_collected: Number(
+            getValue([
+              "plastic_collected",
+              "total_plastic_collected",
+              "total_collected",
+            ])
+          ),
+          plastic_recycled: Number(
+            getValue([
+              "plastic_recycled",
+              "total_plastic_recycled",
+              "total_recycled",
+            ])
+          ),
+          volunteers: Number(getValue(["volunteers", "total_volunteers"])),
         });
       } catch (err) {
         console.error("❌ Failed to fetch stats:", err);
       }
     };
 
-    trackView();
     fetchStats();
   }, []);
 
@@ -98,9 +107,9 @@ const Banner = () => {
               cleaner and greener world.
             </p>
 
-            <Link to="/donate">
+            <Link to="/apply">
               <button className="mt-8 inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 px-6 py-3 2xl:px-8 2xl:py-4 rounded-full text-sm 2xl:text-base font-semibold shadow-md">
-                Save The Environment
+                Apply to Volunteer
               </button>
             </Link>
           </div>

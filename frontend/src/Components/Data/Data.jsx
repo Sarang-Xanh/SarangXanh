@@ -1,8 +1,8 @@
 // Updated Data.jsx with improved timeline (alternating layout, truncated text, popup modal)
 // NOTE: Replace your existing Data.jsx with this file.
 
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useRef, useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
 import Banner from "../Banner";
 import {
   MapContainer,
@@ -12,11 +12,6 @@ import {
   Polyline,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import {
-  VerticalTimeline,
-  VerticalTimelineElement,
-} from "react-vertical-timeline-component";
-import "react-vertical-timeline-component/style.min.css";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -42,18 +37,39 @@ const Data = () => {
   const [showChart, setShowChart] = useState(false);
   const [timelineEvents, setTimelineEvents] = useState([]);
   const [stats, setStats] = useState([]);
-  const [modalData, setModalData] = useState(null);
+  const [hoveredTimelineId, setHoveredTimelineId] = useState(null);
+  const hoverTimeoutRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/data`, {
-          withCredentials: true,
-        });
+        const [statsRes, timelineRes, monthlyRes] = await Promise.all([
+          supabase.rpc("get_stats_totals"),
+          supabase
+            .from("timeline")
+            .select("id, event_date, title, description, image_url")
+            .order("event_date", { ascending: true }),
+          supabase
+            .from("stats_monthly")
+            .select("month, plastic_collected, plastic_recycled, volunteers")
+            .order("month", { ascending: true }),
+        ]);
 
-        const backendStats = res.data.stats;
-        const timeline = res.data.timeline;
-        const monthly = [...res.data.monthlyStats].reverse();
+        if (statsRes.error) throw statsRes.error;
+        if (timelineRes.error) throw timelineRes.error;
+        if (monthlyRes.error) throw monthlyRes.error;
+
+        const rawStats = Array.isArray(statsRes.data)
+          ? statsRes.data[0]
+          : statsRes.data;
+        const getValue = (keys) =>
+          keys.reduce(
+            (acc, key) => (acc ?? rawStats?.[key] ?? null),
+            null
+          ) ?? 0;
+
+        const timeline = timelineRes.data || [];
+        const monthly = (monthlyRes.data || []).slice().reverse();
 
         const labels = monthly.map((item) => item.month.slice(5));
         const collected = monthly.map((item) => item.plastic_collected);
@@ -65,19 +81,27 @@ const Data = () => {
         setStats([
           {
             label: "Plastic Collected",
-            value: `${backendStats.plastic_collected} kg`,
+            value: `${getValue([
+              "plastic_collected",
+              "total_plastic_collected",
+              "total_collected",
+            ])} kg`,
             chart: collected,
             labels,
           },
           {
             label: "Plastic Recycled",
-            value: `${backendStats.plastic_recycled} kg`,
+            value: `${getValue([
+              "plastic_recycled",
+              "total_plastic_recycled",
+              "total_recycled",
+            ])} kg`,
             chart: recycled,
             labels,
           },
           {
             label: "Volunteers",
-            value: `${backendStats.volunteers} people`,
+            value: `${getValue(["volunteers", "total_volunteers"])} people`,
             chart: volunteer,
             labels,
           },
@@ -188,48 +212,108 @@ const Data = () => {
         </div>
 
         {/* Timeline */}
-        <VerticalTimeline>
-          {timelineEvents.map((event, idx) => (
-            <VerticalTimelineElement
-              key={event.id || idx}
-              date={event.date}
-              iconStyle={{ background: "#3b82f6", color: "#fff" }}
-              position={idx % 2 === 0 ? "left" : "right"}
-            >
-              <div
-                className="bg-white p-4 rounded-lg shadow cursor-pointer"
-                onClick={() => setModalData(event)}
-              >
-                <h3 className="text-lg font-bold text-blue-700">{event.title}</h3>
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                  {truncate(event.description)}
-                </p>
-              </div>
-            </VerticalTimelineElement>
-          ))}
-        </VerticalTimeline>
-      </div>
+        <div className="space-y-6">
+          <div className="relative">
+            <div className="absolute top-4 left-0 right-0 h-0.5 bg-blue-200"></div>
+            <div className="flex gap-6 overflow-x-auto pb-6">
+              {timelineEvents.map((event) => {
+                const dateLabel = event.event_date
+                  ? new Date(event.event_date).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "No date";
+                return (
+                  <button
+                    key={event.id}
+                    type="button"
+                    onMouseEnter={() => {
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current);
+                      }
+                      setHoveredTimelineId(event.id);
+                    }}
+                    onMouseLeave={() => {
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current);
+                      }
+                      hoverTimeoutRef.current = setTimeout(() => {
+                        setHoveredTimelineId(null);
+                      }, 250);
+                    }}
+                    className="relative flex flex-col items-center min-w-[160px] text-center"
+                  >
+                    <span className="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-md z-10"></span>
+                    <span className="mt-3 text-xs text-gray-500">{dateLabel}</span>
+                    <span className="mt-1 text-sm font-semibold text-blue-800">
+                      {event.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Modal */}
-      {modalData && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center p-6 z-[999]">
-          <div className="bg-white max-w-lg w-full p-6 rounded-xl shadow-xl relative">
-            <button
-              className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
-              onClick={() => setModalData(null)}
-            >
-              ✕
-            </button>
-
-            {modalData.image && (
-              <img src={modalData.image} alt={modalData.title} className="w-full rounded-lg mb-4" />
-            )}
-
-            <h3 className="text-xl font-bold text-blue-700 mb-2">{modalData.title}</h3>
-            <p className="text-gray-700 text-sm leading-relaxed">{modalData.description}</p>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[220px] relative overflow-hidden">
+            {(() => {
+              const hovered = timelineEvents.find(
+                (event) => event.id === hoveredTimelineId
+              );
+              return (
+                <>
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center text-sm text-gray-500 transition-opacity duration-300 ${
+                      hovered ? "opacity-0" : "opacity-100"
+                    }`}
+                  >
+                    Hover a timeline item to see details.
+                  </div>
+                  <div
+                    className={`transition-all duration-300 ease-out ${
+                      hovered
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-2 pointer-events-none"
+                    }`}
+                  >
+                    {hovered && (
+                      <div className="grid md:grid-cols-2 gap-6 items-start">
+                        <div className="space-y-2">
+                          <div className="text-sm text-gray-500">
+                            {hovered.event_date
+                              ? new Date(hovered.event_date).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )
+                              : "No date"}
+                          </div>
+                          <h3 className="text-lg font-bold text-blue-700">
+                            {hovered.title}
+                          </h3>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {hovered.description}
+                          </p>
+                        </div>
+                        <div className="w-full">
+                          <img
+                            src={hovered.image_url || "/bg.jpg"}
+                            alt={hovered.title}
+                            className="w-full rounded-lg object-cover max-h-64"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
-      )}
+      </div>
     </section>
   );
 };
